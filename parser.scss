@@ -1,0 +1,43 @@
+from appium import webdriver
+import pymysql.cursors
+
+# Setup Appium
+desired_caps = {}
+desired_caps['platformName'] = 'Android'
+desired_caps['deviceName'] = 'YOUR_DEVICE_NAME'
+desired_caps['appPackage'] = 'com.mobile.bca'
+desired_caps['appActivity'] = 'com.bca.MainActivity'
+
+driver = webdriver.Remote('http://localhost:4723/wd/hub', desired_caps)
+
+# Login
+driver.find_element_by_id('com.mobile.bca:id/bca_userid').send_keys('YOUR_USERNAME')
+driver.find_element_by_id('com.mobile.bca:id/bca_password').send_keys('YOUR_PASSWORD')
+driver.find_element_by_id('com.mobile.bca:id/bca_login_button').click()
+
+# Get Mutasi Data
+driver.find_element_by_id('com.mobile.bca:id/bca_menu_history').click()
+driver.find_element_by_id('com.mobile.bca:id/bca_history_tab_mutasi').click()
+
+# Parse Mutasi Data
+mutasi_elements = driver.find_elements_by_id('com.mobile.bca:id/bca_mutasi_list_item')
+mutasi_data = []
+
+for element in mutasi_elements:
+    tanggal = element.find_element_by_id('com.mobile.bca:id/bca_mutasi_tanggal').text
+    deskripsi = element.find_element_by_id('com.mobile.bca:id/bca_mutasi_deskripsi').text
+    nominal = element.find_element_by_id('com.mobile.bca:id/bca_mutasi_nominal').text
+    mutasi_data.append((tanggal, deskripsi, nominal))
+
+# Save to database
+connection = pymysql.connect(host='YOUR_IP', user='YOUR_USERNAME', password='YOUR_PASSWORD', database='YOUR_DB_NAME', charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
+
+with connection.cursor() as cursor:
+    for data in mutasi_data:
+        sql = "INSERT INTO mutasi (tanggal, deskripsi, nominal) VALUES (%s, %s, %s)"
+        cursor.execute(sql, data)
+
+    connection.commit()
+
+# Quit Appium
+driver.quit()
